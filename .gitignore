@@ -1,0 +1,7 @@
+build/classes/
+build/compiled_res/
+build/gen/
+build/unsigned.apk
+debug.keystore
+*.idsig
+.gradle/
