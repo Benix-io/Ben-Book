@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Default Dark Theme -->
+    <style name="Theme.BenBook.Dark" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/dark_bg</item>
+        <item name="android:colorPrimary">@color/dark_primary</item>
+        <item name="android:textColor">@color/dark_text</item>
+    </style>
+
+    <!-- Green Dark Theme -->
+    <style name="Theme.BenBook.GreenDark" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/green_bg</item>
+        <item name="android:colorPrimary">@color/green_primary</item>
+        <item name="android:textColor">@color/dark_text</item>
+    </style>
+
+    <!-- Blue Dark Theme -->
+    <style name="Theme.BenBook.BlueDark" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/blue_bg</item>
+        <item name="android:colorPrimary">@color/blue_primary</item>
+        <item name="android:textColor">@color/dark_text</item>
+    </style>
+
+    <!-- Clean Light Theme -->
+    <style name="Theme.BenBook.Light" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/light_bg</item>
+        <item name="android:colorPrimary">@color/light_primary</item>
+        <item name="android:textColor">@color/light_text</item>
+    </style>
+</resources>
