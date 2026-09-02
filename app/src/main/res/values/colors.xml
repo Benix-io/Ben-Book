@@ -1,26 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="white">#FFFFFF</color>
-    <color name="black">#000000</color>
-    <color name="transparent">#00000000</color>
-    <color name="dark_bg">#121212</color>
-    <color name="dark_surface">#1E1E1E</color>
-    <color name="dark_primary">#FFB74D</color>
-    <color name="dark_text">#FFFFFF</color>
-    <color name="dark_text_secondary">#AAAAAA</color>
-    <color name="green_bg">#0D1B13</color>
-    <color name="green_surface">#162B20</color>
-    <color name="green_primary">#4CAF50</color>
-    <color name="blue_bg">#0B132B</color>
-    <color name="blue_surface">#1C2541</color>
-    <color name="blue_primary">#4D96FF</color>
-    <color name="light_bg">#F5F5F5</color>
-    <color name="light_surface">#FFFFFF</color>
-    <color name="light_primary">#E65100</color>
-    <color name="light_text">#212121</color>
-    <color name="light_text_secondary">#757575</color>
-    <color name="code_keyword">#FF7B72</color>
-    <color name="code_string">#A5D6FF</color>
-    <color name="code_comment">#8B949E</color>
-    <color name="delete_red">#EF5350</color>
+    <color name="bg_main">#0B0F19</color>
+    <color name="bg_card">#131B2E</color>
+    <color name="bg_input">#1A233A</color>
+    <color name="bg_code">#080C14</color>
+    <color name="accent_blue">#38BDF8</color>
+    <color name="primary_btn">#2563EB</color>
+    <color name="text_white">#FFFFFF</color>
+    <color name="text_muted">#94A3B8</color>
+    <color name="code_green">#A7F3D0</color>
+    <color name="border_outline">#334155</color>
+    <color name="ic_launcher_background">#2575FC</color>
 </resources>

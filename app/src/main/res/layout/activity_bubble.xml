@@ -1,48 +1,108 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#0F172A"
     android:orientation="vertical"
-    android:padding="12dp"
-    android:background="#121212">
+    android:padding="20dp">
 
     <TextView
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="⚡ Quick Snippet Capture"
-        android:textColor="#FFB74D"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp" />
+        android:text="🫧 Quick Bubble Capture"
+        android:textColor="#38BDF8"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Target Topic"
+        android:textColor="#94A3B8"
+        android:textSize="12sp" />
+
+    <Spinner
+        android:id="@+id/spinner_bubble_topic"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginTop="4dp"
+        android:background="@drawable/bg_outlined_box" />
 
     <EditText
-        android:id="@+id/bubble_et_desc"
+        android:id="@+id/et_bubble_title"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_outlined_box"
+        android:hint="Snippet Title"
+        android:paddingHorizontal="12dp"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#64748B"
+        android:textSize="14sp" />
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Description (optional)..."
-        android:textColor="#FFFFFF"
-        android:textSize="13sp"
-        android:padding="8dp"
-        android:background="#1E1E1E"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginTop="10dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Syntax Language:"
+            android:textColor="#94A3B8"
+            android:textSize="12sp" />
+
+        <Spinner
+            android:id="@+id/spinner_bubble_lang"
+            android:layout_width="130dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_outlined_box" />
+    </LinearLayout>
 
     <EditText
-        android:id="@+id/bubble_et_code"
+        android:id="@+id/et_bubble_code"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:hint="Paste or write code here..."
-        android:fontFamily="monospace"
-        android:gravity="top"
-        android:padding="8dp"
-        android:background="#1E1E1E"
-        android:textColor="#FFFFFF"
+        android:layout_height="120dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_code_card"
+        android:gravity="top|start"
+        android:hint="Type or paste code snippet..."
+        android:padding="12dp"
+        android:textColor="#A7F3D0"
+        android:textColorHint="#475569"
         android:textSize="13sp"
-        android:layout_marginBottom="8dp" />
+        android:typeface="monospace" />
 
-    <Button
-        android:id="@+id/bubble_btn_save"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Save Snippet" />
+        android:layout_marginTop="14dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_bubble_close"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_outlined_box"
+            android:text="Close"
+            android:textAllCaps="false"
+            android:textColor="#94A3B8" />
+
+        <Button
+            android:id="@+id/btn_bubble_save"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_btn_primary"
+            android:text="Save Snippet"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold" />
+    </LinearLayout>
 </LinearLayout>

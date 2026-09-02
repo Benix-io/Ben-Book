@@ -1,35 +1,45 @@
 package com.systsync.ui;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.view.LayoutInflater;
+import android.view.Gravity;
 import android.view.View;
-import android.widget.Button;
+import android.view.ViewGroup;
+import android.view.animation.TranslateAnimation;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.systsync.R;
-import com.systsync.bubble.BubbleHelper;
-import com.systsync.data.CodeBlock;
-import com.systsync.data.CodeEntry;
+import com.systsync.bubble.BubbleActivity;
 import com.systsync.data.DataManager;
 import com.systsync.data.Topic;
+import com.systsync.service.AppService;
 import com.systsync.theme.ThemeManager;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.List;
 
 public class MainActivity extends Activity {
+    private static final int REQ_EXPORT = 101;
+    private static final int REQ_IMPORT = 102;
+    private static final int REQ_NOTIF = 201;
 
     private DataManager dataManager;
-    private LinearLayout containerContent;
+    private LinearLayout containerTopics;
     private EditText etSearch;
+    private View drawerDim;
+    private LinearLayout drawerCard;
+    private View rootLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,185 +48,284 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
 
         dataManager = DataManager.getInstance(this);
-        containerContent = findViewById(R.id.container_content);
-        etSearch = findViewById(R.id.et_search);
+        rootLayout = findViewById(R.id.main_root_layout);
+        rootLayout.setBackgroundColor(ThemeManager.getBackgroundColor(this));
 
-        Button btnBubble = findViewById(R.id.btn_bubble_toggle);
-        Button btnSettings = findViewById(R.id.btn_settings);
-        Button btnAdd = findViewById(R.id.btn_add_action);
+        containerTopics = findViewById(R.id.container_topic_cards);
+        etSearch = findViewById(R.id.et_search_topics);
+        drawerDim = findViewById(R.id.drawer_dim);
+        drawerCard = findViewById(R.id.left_drawer_card);
 
-        btnBubble.setOnClickListener(v -> BubbleHelper.displayBubble(this));
-        btnSettings.setOnClickListener(v -> SettingsDialog.show(this, this::renderUI));
-        btnAdd.setOnClickListener(v -> showAddTopicDialog());
+        checkPermissions();
 
+        findViewById(R.id.btn_open_drawer).setOnClickListener(v -> openDrawer());
+        findViewById(R.id.btn_close_drawer).setOnClickListener(v -> closeDrawer());
+        drawerDim.setOnClickListener(v -> closeDrawer());
+
+        findViewById(R.id.btn_trigger_bubble).setOnClickListener(v -> 
+            startActivity(new Intent(this, BubbleActivity.class))
+        );
+
+        findViewById(R.id.fab_add_topic).setOnClickListener(v -> showCreateTopicDialog(null));
+
+        setupDrawerButtons();
+        setupSearch();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        rootLayout.setBackgroundColor(ThemeManager.getBackgroundColor(this));
+        renderTopics(etSearch.getText().toString().trim());
+    }
+
+    private void checkPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIF);
+            } else {
+                AppService.start(this);
+            }
+        } else {
+            AppService.start(this);
+        }
+    }
+
+    private void openDrawer() {
+        drawerDim.setVisibility(View.VISIBLE);
+        drawerCard.setVisibility(View.VISIBLE);
+        TranslateAnimation anim = new TranslateAnimation(-drawerCard.getWidth(), 0, 0, 0);
+        anim.setDuration(220);
+        drawerCard.startAnimation(anim);
+    }
+
+    private void closeDrawer() {
+        drawerDim.setVisibility(View.GONE);
+        drawerCard.setVisibility(View.GONE);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (drawerCard.getVisibility() == View.VISIBLE) {
+            closeDrawer();
+            return;
+        }
+        super.onBackPressed();
+    }
+
+    private void setupDrawerButtons() {
+        findViewById(R.id.drawer_btn_export).setOnClickListener(v -> {
+            closeDrawer();
+            Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+            i.addCategory(Intent.CATEGORY_OPENABLE);
+            i.setType("*/*");
+            i.putExtra(Intent.EXTRA_TITLE, "benbook_vault.sync");
+            startActivityForResult(i, REQ_EXPORT);
+        });
+
+        findViewById(R.id.drawer_btn_import).setOnClickListener(v -> {
+            closeDrawer();
+            Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            i.addCategory(Intent.CATEGORY_OPENABLE);
+            i.setType("*/*");
+            startActivityForResult(i, REQ_IMPORT);
+        });
+
+        findViewById(R.id.drawer_btn_about).setOnClickListener(v -> {
+            closeDrawer();
+            showAboutDialog();
+        });
+
+        findViewById(R.id.btn_theme_dark).setOnClickListener(v -> changeTheme(ThemeManager.THEME_DARK));
+        findViewById(R.id.btn_theme_blue).setOnClickListener(v -> changeTheme(ThemeManager.THEME_BLUE));
+        findViewById(R.id.btn_theme_green).setOnClickListener(v -> changeTheme(ThemeManager.THEME_GREEN));
+    }
+
+    private void changeTheme(String themeKey) {
+        ThemeManager.setTheme(this, themeKey);
+        closeDrawer();
+        recreate();
+    }
+
+    private void showAboutDialog() {
+        new AlertDialog.Builder(this)
+            .setTitle("⚡ Benbook")
+            .setMessage("Native Android Snippet Manager & Floating Code Companion.\n\n• Developer: Ben (@Benix-io)\n• Architecture: Pure Native Java (API 34–36)\n• Features: Multi-Card Snippets, .sync Vault Backup & Restore.")
+            .setPositiveButton("OK", null)
+            .show();
+    }
+
+    private void setupSearch() {
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                filterContent(s.toString().trim().toLowerCase());
+                renderTopics(s.toString().trim());
             }
             @Override
             public void afterTextChanged(Editable s) {}
         });
-
-        renderUI();
     }
 
-    private void renderUI() {
-        containerContent.removeAllViews();
-        List<Topic> topics = dataManager.getTopics();
+    private void renderTopics(String query) {
+        containerTopics.removeAllViews();
+        List<Topic> list = dataManager.getTopics();
+        int cardBg = ThemeManager.getCardColor(this);
 
-        if (topics.isEmpty()) {
-            TextView emptyView = new TextView(this);
-            emptyView.setText("No topics found. Tap '+ Add Topic / Entry' below.");
-            emptyView.setTextColor(Color.GRAY);
-            emptyView.setPadding(0, 40, 0, 0);
-            containerContent.addView(emptyView);
-            return;
-        }
+        for (Topic t : list) {
+            if (!query.isEmpty() && !t.getTitle().toLowerCase().contains(query.toLowerCase()) && !t.getDescription().toLowerCase().contains(query.toLowerCase())) {
+                continue;
+            }
 
-        for (Topic topic : topics) {
-            renderTopicCard(topic);
-        }
-    }
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setBackgroundResource(R.drawable.bg_card_rounded);
+            card.getBackground().setTint(cardBg);
+            card.setPadding(24, 20, 24, 20);
 
-    private void renderTopicCard(Topic topic) {
-        LinearLayout topicLayout = new LinearLayout(this);
-        topicLayout.setOrientation(LinearLayout.VERTICAL);
-        topicLayout.setPadding(0, 16, 0, 16);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.setMargins(0, 0, 0, 16);
+            card.setLayoutParams(lp);
 
-        LinearLayout headerLayout = new LinearLayout(this);
-        headerLayout.setOrientation(LinearLayout.HORIZONTAL);
+            LinearLayout top = new LinearLayout(this);
+            top.setOrientation(LinearLayout.HORIZONTAL);
+            top.setGravity(Gravity.CENTER_VERTICAL);
 
-        TextView tvTitle = new TextView(this);
-        tvTitle.setText("📂 " + topic.getName());
-        tvTitle.setTextSize(18);
-        tvTitle.setTextColor(Color.parseColor("#FFB74D"));
-        tvTitle.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1.0f));
+            TextView tvTitle = new TextView(this);
+            tvTitle.setText(t.getTitle());
+            tvTitle.setTextColor(Color.parseColor("#38BDF8"));
+            tvTitle.setTextSize(17);
+            tvTitle.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        Button btnAddEntry = new Button(this);
-        btnAddEntry.setText("+ Entry");
-        btnAddEntry.setTextSize(10);
-        btnAddEntry.setOnClickListener(v -> showAddEntryDialog(topic));
-
-        Button btnDeleteTopic = new Button(this);
-        btnDeleteTopic.setText("Del");
-        btnDeleteTopic.setTextSize(10);
-        btnDeleteTopic.setOnClickListener(v -> {
-            dataManager.getTopics().remove(topic);
-            dataManager.saveLocalData();
-            renderUI();
-        });
-
-        headerLayout.addView(tvTitle);
-        headerLayout.addView(btnAddEntry);
-        headerLayout.addView(btnDeleteTopic);
-        topicLayout.addView(headerLayout);
-
-        for (CodeEntry entry : topic.getEntries()) {
-            renderEntryCard(topicLayout, topic, entry);
-        }
-
-        containerContent.addView(topicLayout);
-    }
-
-    private void renderEntryCard(LinearLayout parent, Topic topic, CodeEntry entry) {
-        TextView entryTitle = new TextView(this);
-        entryTitle.setText(" • " + entry.getTitle());
-        entryTitle.setTextSize(15);
-        entryTitle.setTextColor(Color.WHITE);
-        entryTitle.setPadding(12, 10, 0, 6);
-        parent.addView(entryTitle);
-
-        LayoutInflater inflater = LayoutInflater.from(this);
-        for (CodeBlock block : entry.getCodeBlocks()) {
-            View blockView = inflater.inflate(R.layout.item_code_block, parent, false);
-
-            TextView tvDesc = blockView.findViewById(R.id.tv_block_desc);
-            TextView tvCode = blockView.findViewById(R.id.tv_code_content);
-            Button btnCopy = blockView.findViewById(R.id.btn_copy_code);
-            Button btnDel = blockView.findViewById(R.id.btn_delete_code);
-
-            tvDesc.setText(block.getDescription().isEmpty() ? "Snippet" : block.getDescription());
-            tvCode.setText(SyntaxHighlighter.highlight(block.getCode()));
-
-            btnCopy.setOnClickListener(v -> {
-                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                ClipData clip = ClipData.newPlainText("Code Block", block.getCode());
-                cm.setPrimaryClip(clip);
-                Toast.makeText(this, "Copied code to clipboard!", Toast.LENGTH_SHORT).show();
-            });
-
+            TextView btnDel = new TextView(this);
+            btnDel.setText("🗑");
+            btnDel.setTextSize(16);
             btnDel.setOnClickListener(v -> {
-                entry.getCodeBlocks().remove(block);
-                dataManager.saveLocalData();
-                renderUI();
+                dataManager.deleteTopic(t);
+                renderTopics(etSearch.getText().toString().trim());
             });
 
-            parent.addView(blockView);
+            top.addView(tvTitle);
+            top.addView(btnDel);
+            card.addView(top);
+
+            if (!t.getDescription().isEmpty()) {
+                TextView tvDesc = new TextView(this);
+                tvDesc.setText(t.getDescription());
+                tvDesc.setTextColor(Color.parseColor("#94A3B8"));
+                tvDesc.setTextSize(13);
+                tvDesc.setPadding(0, 4, 0, 8);
+                card.addView(tvDesc);
+            }
+
+            LinearLayout bottom = new LinearLayout(this);
+            bottom.setOrientation(LinearLayout.HORIZONTAL);
+            bottom.setGravity(Gravity.CENTER_VERTICAL);
+
+            TextView tvDate = new TextView(this);
+            tvDate.setText("Created: " + t.getCreatedAt());
+            tvDate.setTextColor(Color.parseColor("#64748B"));
+            tvDate.setTextSize(11);
+            tvDate.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+            TextView badgeEdit = new TextView(this);
+            badgeEdit.setText("Hold to Edit");
+            badgeEdit.setTextSize(10);
+            badgeEdit.setTextColor(Color.parseColor("#CBD5E1"));
+            badgeEdit.setBackgroundResource(R.drawable.bg_badge);
+            badgeEdit.setPadding(12, 4, 12, 4);
+
+            bottom.addView(tvDate);
+            bottom.addView(badgeEdit);
+            card.addView(bottom);
+
+            card.setOnClickListener(v -> {
+                Intent i = new Intent(this, TopicDetailActivity.class);
+                i.putExtra("topic_id", t.getId());
+                startActivity(i);
+            });
+
+            card.setOnLongClickListener(v -> {
+                showCreateTopicDialog(t);
+                return true;
+            });
+
+            containerTopics.addView(card);
         }
     }
 
-    private void showAddTopicDialog() {
-        EditText input = new EditText(this);
-        input.setHint("Topic name (e.g. Android Java, SQL)");
-        new AlertDialog.Builder(this)
-            .setTitle("Create New Topic")
-            .setView(input)
-            .setPositiveButton("Create", (d, w) -> {
-                String name = input.getText().toString().trim();
-                if (!name.isEmpty()) {
-                    Topic t = new Topic(String.valueOf(System.currentTimeMillis()), name);
-                    dataManager.getTopics().add(t);
-                    dataManager.saveLocalData();
-                    renderUI();
+    private void showCreateTopicDialog(Topic editTopic) {
+        AlertDialog.Builder b = new AlertDialog.Builder(this);
+        LinearLayout l = new LinearLayout(this);
+        l.setOrientation(LinearLayout.VERTICAL);
+        l.setPadding(40, 24, 40, 12);
+
+        final EditText etT = new EditText(this);
+        etT.setHint("Topic Title (e.g. Termux, Docker, Kali)");
+        etT.setBackgroundResource(R.drawable.bg_outlined_box);
+        etT.setPadding(16, 12, 16, 12);
+        etT.setTextColor(Color.WHITE);
+        if (editTopic != null) etT.setText(editTopic.getTitle());
+
+        final EditText etD = new EditText(this);
+        etD.setHint("Description (Optional)");
+        etD.setBackgroundResource(R.drawable.bg_outlined_box);
+        etD.setPadding(16, 12, 16, 12);
+        etD.setTextColor(Color.WHITE);
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        dlp.setMargins(0, 14, 0, 0);
+        etD.setLayoutParams(dlp);
+        if (editTopic != null) etD.setText(editTopic.getDescription());
+
+        l.addView(etT);
+        l.addView(etD);
+
+        b.setTitle(editTopic == null ? "Create New Topic" : "Edit Topic");
+        b.setView(l);
+        b.setPositiveButton(editTopic == null ? "Create" : "Save", (d, w) -> {
+            String title = etT.getText().toString().trim();
+            if (!title.isEmpty()) {
+                if (editTopic == null) {
+                    dataManager.addTopic(new Topic(title, etD.getText().toString().trim()));
+                } else {
+                    editTopic.setTitle(title);
+                    editTopic.setDescription(etD.getText().toString().trim());
+                    dataManager.saveToPrefs();
                 }
-            })
-            .setNegativeButton("Cancel", null)
-            .show();
+                renderTopics("");
+            }
+        });
+        b.setNegativeButton("Cancel", null);
+        b.show();
     }
 
-    private void showAddEntryDialog(Topic topic) {
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(30, 20, 30, 10);
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode != RESULT_OK || data == null || data.getData() == null) return;
+        Uri uri = data.getData();
 
-        EditText etTitle = new EditText(this);
-        etTitle.setHint("Entry Title (e.g. RecyclerView Adapter)");
-        EditText etCode = new EditText(this);
-        etCode.setHint("Code snippet body...");
-
-        layout.addView(etTitle);
-        layout.addView(etCode);
-
-        new AlertDialog.Builder(this)
-            .setTitle("Add Code to " + topic.getName())
-            .setView(layout)
-            .setPositiveButton("Save", (d, w) -> {
-                String title = etTitle.getText().toString().trim();
-                String code = etCode.getText().toString().trim();
-                if (!title.isEmpty() && !code.isEmpty()) {
-                    CodeEntry entry = new CodeEntry(String.valueOf(System.currentTimeMillis()), title);
-                    entry.getCodeBlocks().add(new CodeBlock(String.valueOf(System.currentTimeMillis()), title, code, "java"));
-                    topic.getEntries().add(entry);
-                    dataManager.saveLocalData();
-                    renderUI();
+        if (requestCode == REQ_EXPORT) {
+            try {
+                OutputStream os = getContentResolver().openOutputStream(uri);
+                if (dataManager.exportToStream(os)) {
+                    Toast.makeText(this, "✅ .sync vault exported successfully!", Toast.LENGTH_LONG).show();
                 }
-            })
-            .setNegativeButton("Cancel", null)
-            .show();
-    }
-
-    private void filterContent(String query) {
-        if (query.isEmpty()) {
-            renderUI();
-            return;
-        }
-        containerContent.removeAllViews();
-        for (Topic t : dataManager.getTopics()) {
-            if (t.getName().toLowerCase().contains(query)) {
-                renderTopicCard(t);
+            } catch (Exception e) {
+                Toast.makeText(this, "Export Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        } else if (requestCode == REQ_IMPORT) {
+            try {
+                InputStream is = getContentResolver().openInputStream(uri);
+                if (dataManager.importFromStream(is)) {
+                    Toast.makeText(this, "✅ .sync vault restored successfully!", Toast.LENGTH_LONG).show();
+                    renderTopics("");
+                } else {
+                    Toast.makeText(this, "❌ Invalid .sync file format", Toast.LENGTH_SHORT).show();
+                }
+            } catch (Exception e) {
+                Toast.makeText(this, "Import Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         }
     }

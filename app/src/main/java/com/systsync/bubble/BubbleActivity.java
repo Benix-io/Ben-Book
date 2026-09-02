@@ -2,8 +2,10 @@ package com.systsync.bubble;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.Toast;
 import com.systsync.R;
 import com.systsync.data.CodeBlock;
@@ -13,62 +15,59 @@ import com.systsync.data.Topic;
 import java.util.List;
 
 public class BubbleActivity extends Activity {
-
-    private EditText etDesc;
-    private EditText etCode;
-    private Button btnSave;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bubble);
 
-        etDesc = findViewById(R.id.bubble_et_desc);
-        etCode = findViewById(R.id.bubble_et_code);
-        btnSave = findViewById(R.id.bubble_btn_save);
-
-        btnSave.setOnClickListener(v -> saveSnippetAndClose());
-    }
-
-    private void saveSnippetAndClose() {
-        String code = etCode.getText().toString().trim();
-        String desc = etDesc.getText().toString().trim();
-
-        if (code.isEmpty()) {
-            Toast.makeText(this, "Code content cannot be empty", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
         DataManager dm = DataManager.getInstance(this);
         List<Topic> topics = dm.getTopics();
 
-        Topic quickTopic = null;
-        for (Topic t : topics) {
-            if ("Quick Notes".equalsIgnoreCase(t.getName())) {
-                quickTopic = t;
-                break;
+        Spinner spTopic = findViewById(R.id.spinner_bubble_topic);
+        Spinner spLang = findViewById(R.id.spinner_bubble_lang);
+        EditText etTitle = findViewById(R.id.et_bubble_title);
+        EditText etCode = findViewById(R.id.et_bubble_code);
+        Button btnSave = findViewById(R.id.btn_bubble_save);
+        Button btnClose = findViewById(R.id.btn_bubble_close);
+
+        String[] names = new String[Math.max(1, topics.size())];
+        if (topics.isEmpty()) {
+            Topic t = new Topic("General", "Default notes");
+            dm.addTopic(t);
+            topics = dm.getTopics();
+        }
+        for (int i = 0; i < topics.size(); i++) {
+            names[i] = topics.get(i).getTitle();
+        }
+
+        ArrayAdapter<String> tAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, names);
+        spTopic.setAdapter(tAdapter);
+
+        String[] langs = new String[]{"BASH", "PYTHON", "JAVA", "JAVASCRIPT", "KOTLIN", "YAML", "JSON", "SQL"};
+        ArrayAdapter<String> lAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, langs);
+        spLang.setAdapter(lAdapter);
+
+        List<Topic> finalTopics = topics;
+        btnSave.setOnClickListener(v -> {
+            String title = etTitle.getText().toString().trim();
+            String code = etCode.getText().toString().trim();
+            if (title.isEmpty() || code.isEmpty()) {
+                Toast.makeText(this, "Title & Code required", Toast.LENGTH_SHORT).show();
+                return;
             }
-        }
 
-        if (quickTopic == null) {
-            quickTopic = new Topic(String.valueOf(System.currentTimeMillis()), "Quick Notes");
-            topics.add(quickTopic);
-        }
+            int idx = spTopic.getSelectedItemPosition();
+            Topic target = (idx >= 0 && idx < finalTopics.size()) ? finalTopics.get(idx) : finalTopics.get(0);
 
-        CodeEntry entry = new CodeEntry(String.valueOf(System.currentTimeMillis()), 
-            desc.isEmpty() ? "Snippet " + (quickTopic.getEntries().size() + 1) : desc);
-        
-        CodeBlock block = new CodeBlock(
-            String.valueOf(System.currentTimeMillis()),
-            desc,
-            code,
-            "plaintext"
-        );
-        entry.getCodeBlocks().add(block);
-        quickTopic.getEntries().add(entry);
+            CodeEntry entry = new CodeEntry(title, "Quick captured via floating companion");
+            entry.addBlock(new CodeBlock(code, spLang.getSelectedItem().toString()));
+            target.addEntry(entry);
+            dm.saveToPrefs();
 
-        dm.saveLocalData();
-        Toast.makeText(this, "Saved to Quick Notes!", Toast.LENGTH_SHORT).show();
-        finish();
+            Toast.makeText(this, "⚡ Snippet saved to " + target.getTitle(), Toast.LENGTH_SHORT).show();
+            finish();
+        });
+
+        btnClose.setOnClickListener(v -> finish());
     }
 }
