@@ -7,8 +7,8 @@ import sys
 SDK_JAR = os.path.expanduser("~/android-sdk/platforms/android-34/android.jar")
 BUILD_DIR = "build"
 APK_UNSIGNED = f"{BUILD_DIR}/unsigned.apk"
-APK_SIGNED = f"{BUILD_DIR}/BenBook-debug.apk"
-KEYSTORE = "debug.keystore"
+APK_SIGNED = f"{BUILD_DIR}/BenBook-release.apk"
+KEYSTORE = "systsync.keystore"
 
 def run_cmd(cmd):
     result = subprocess.run(cmd, shell=True)
@@ -51,12 +51,12 @@ def compile_and_build():
 
     print("[5/5] Signing APK...")
     if not os.path.exists(KEYSTORE):
-        run_cmd(f"keytool -genkey -v -keystore {KEYSTORE} -storepass android -alias androiddebugkey "
+        run_cmd(f"keytool -genkey -v -keystore {KEYSTORE} -storepass android -alias systsync "
                 f"-keypass android -keyalg RSA -keysize 2048 -validity 10000 "
                 f"-dname 'CN=Ben,O=SystSync,C=RW'")
     
-    run_cmd(f"apksigner sign --ks {KEYSTORE} --ks-pass pass:android --ks-key-alias androiddebugkey "
-            f"--key-pass pass:android --out {APK_SIGNED} {APK_UNSIGNED}")
+    run_cmd(f"apksigner sign --ks {KEYSTORE} --ks-pass pass:Ben.com@ --ks-key-alias systsync "
+            f"--key-pass pass:Ben.com@ --out {APK_SIGNED} {APK_UNSIGNED}")
     print(f"\n[✅] Build Complete! APK ready at: {APK_SIGNED}")
 
 def git_sync():
